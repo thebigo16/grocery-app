@@ -20,6 +20,14 @@ It's an installable web app (PWA): open it in the phone browser and "Add to Home
 - Firebase project: `grocery-app-e849a`. Security rules: `firestore.rules`
   (publish changes in the Firebase console under Firestore → Rules).
 
+## Hosting
+
+- Live at https://grocery-app-tau-eosin.vercel.app (Vercel, deploys on every push to `main`).
+- `api/` holds Vercel serverless functions. They need these environment variables in Vercel:
+  - `ANTHROPIC_API_KEY` (secret) for recipe and pantry photo import
+  - `ALLOWED_EMAILS` (optional, comma separated) to limit who can use the Claude features
+- If you add a custom domain, also add it in Firebase → Authentication → Settings → Authorized domains.
+
 ## Develop
 
 ```sh
