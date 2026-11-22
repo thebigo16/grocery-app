@@ -21,6 +21,7 @@ export default function Pantry({ household, user }) {
   const overrides = useCategoryOverrides(hid);
   const [text, setText] = useState('');
   const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -35,7 +36,12 @@ export default function Pantry({ household, user }) {
   }, [pantry]);
 
   const groups = useMemo(() => {
-    const shown = (pantry || []).filter((p) => filter === 'all' || (p.status || 'have') === filter);
+    // Match the start of any word, so "oil" finds olive oil but not aluminum foil.
+    const q = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = q ? new RegExp(`(^|[^a-z])${q}`, 'i') : null;
+    const shown = (pantry || []).filter(
+      (p) => (filter === 'all' || (p.status || 'have') === filter) && (!re || re.test(p.name)),
+    );
     const byCat = new Map();
     for (const p of shown) {
       const cat = categoryById[p.category] ? p.category : 'other';
@@ -46,7 +52,7 @@ export default function Pantry({ household, user }) {
       ...c,
       items: byCat.get(c.id).sort((a, b) => a.name.localeCompare(b.name)),
     }));
-  }, [pantry, filter]);
+  }, [pantry, filter, search]);
 
   const add = async (e) => {
     e.preventDefault();
@@ -73,8 +79,27 @@ export default function Pantry({ household, user }) {
     if (status !== 'have') flash(`${staple.name} added to the grocery list`);
   };
 
+  const q = search.trim();
+
   return (
     <section>
+      {pantry && pantry.length > 0 && (
+        <div className="search-bar">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Search the pantry"
+            aria-label="Search the pantry"
+            enterKeyHint="search"
+            autoCapitalize="none"
+          />
+          {search && (
+            <button className="search-clear" onClick={() => setSearch('')} aria-label="Clear search">×</button>
+          )}
+        </div>
+      )}
+
       <p className="muted small intro">
         Staples you keep on hand. Mark something <b>Low</b> or <b>Out</b> and it goes on the grocery
         list. Checking it off the list marks it <b>Have</b> again.
@@ -152,8 +177,29 @@ export default function Pantry({ household, user }) {
         </div>
       ))}
 
-      {pantry && pantry.length > 0 && groups.length === 0 && (
+      {pantry && pantry.length > 0 && groups.length === 0 && !q && (
         <p className="muted center">Nothing marked {filter}.</p>
+      )}
+      {pantry && pantry.length > 0 && groups.length === 0 && q && (
+        <div className="empty">
+          <p>
+            No staples match “{q}”{filter !== 'all' ? ` in ${filter}` : ''}.
+          </p>
+          {filter !== 'all' && (
+            <button className="btn" onClick={() => setFilter('all')}>Search all staples</button>
+          )}
+          {filter === 'all' && (
+            <button
+              className="btn primary"
+              onClick={() => {
+                addStaples(hid, [q], pantry || [], overrides);
+                setSearch('');
+              }}
+            >
+              Add “{q}” to the pantry
+            </button>
+          )}
+        </div>
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}

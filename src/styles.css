@@ -323,3 +323,12 @@ label > input, label > select, label > textarea { font-weight: 400; }
 .chip-edit { margin-left: 6px; opacity: 0.75; font-size: 0.85em; }
 .inline-field { flex-direction: row; align-items: center; gap: 10px; margin: 4px 0 8px; }
 .inline-field select { flex: 1; }
+
+.search-bar { position: relative; margin-bottom: 12px; }
+.search-bar input { width: 100%; padding-right: 40px; }
+.search-bar input::-webkit-search-cancel-button { display: none; }
+.search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; border-radius: 50%; border: 0;
+  background: var(--line); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
+}
