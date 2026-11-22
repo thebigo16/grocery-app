@@ -302,3 +302,24 @@ label > input, label > select, label > textarea { font-weight: 400; }
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
 }
 .plain-list > li:first-child { border-top: 0; }
+
+.file-btn { align-items: center; gap: 6px; cursor: pointer; }
+.file-btn.disabled { opacity: 0.5; pointer-events: none; }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumb { position: relative; width: 86px; height: 110px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button {
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%;
+  border: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 16px; line-height: 1; cursor: pointer;
+}
+
+.list-switcher {
+  display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 2px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.list-switcher::-webkit-scrollbar { display: none; }
+.list-switcher .chip { flex: 0 0 auto; white-space: nowrap; }
+.list-switcher .chip.add { border-style: dashed; }
+.chip-edit { margin-left: 6px; opacity: 0.75; font-size: 0.85em; }
+.inline-field { flex-direction: row; align-items: center; gap: 10px; margin: 4px 0 8px; }
+.inline-field select { flex: 1; }

@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useLive, docsOf } from './useLive.js';
 import {
   collection,
@@ -13,6 +14,11 @@ import { guessCategory, normalizeName } from './categories.js';
 import { ingredientKey } from './ingredients.js';
 
 export const itemsCol = (hid) => collection(db, 'households', hid, 'items');
+export const listsCol = (hid) => collection(db, 'households', hid, 'lists');
+
+/** The list every household starts with. Items saved before lists existed have no listId and belong here. */
+export const MAIN_LIST = 'main';
+export const listIdOf = (item) => item.listId || MAIN_LIST;
 const overridesDoc = (hid) => doc(db, 'households', hid, 'settings', 'categoryOverrides');
 
 /** Live list of grocery items. */
@@ -31,7 +37,9 @@ const EMPTY = {};
  * re-activates names that were checked off. Returns { added, existing }.
  * Each entry: { name, note?, category?, sources? }
  */
-export async function addItems(hid, entries, { items = [], overrides = {}, by = '' } = {}) {
+export async function addItems(hid, entries, { items = [], overrides = {}, by = '', listId = MAIN_LIST } = {}) {
+  // Only items on the target list count as duplicates.
+  items = items.filter((i) => listIdOf(i) === listId);
   const byKey = new Map(items.map((i) => [i.nameKey, i]));
   // Also match loosely so "Onions" and "onion" land on the same row.
   const byLoose = new Map(items.map((i) => [ingredientKey(i.name), i]));
@@ -79,6 +87,7 @@ export async function addItems(hid, entries, { items = [], overrides = {}, by = 
       createdAt: serverTimestamp(),
       addedBy: by,
       sources,
+      listId,
     };
     batch.set(ref, item);
     byKey.set(nameKey, { id: ref.id, ...item });
@@ -128,4 +137,62 @@ export function clearItems(hid, items) {
  */
 export function bg(promise) {
   promise.catch((e) => console.error('Sync error', e));
+}
+
+/* ---------- Lists ---------- */
+
+const millisOf = (t) => (t?.toMillis ? t.toMillis() : Number.MAX_SAFE_INTEGER);
+
+/** Live lists, main list first, then oldest to newest. */
+export function useLists(hid) {
+  const docs = useLive(() => hid && listsCol(hid), docsOf, [hid]);
+  return useMemo(() => {
+    if (!docs) return null;
+    const main = docs.find((d) => d.id === MAIN_LIST);
+    const rest = docs
+      .filter((d) => d.id !== MAIN_LIST)
+      .sort((a, b) => millisOf(a.createdAt) - millisOf(b.createdAt));
+    return [{ id: MAIN_LIST, ...main, name: main?.name || 'Groceries' }, ...rest];
+  }, [docs]);
+}
+
+export function createList(hid, name, by = '') {
+  const ref = doc(listsCol(hid));
+  bg(setDoc(ref, { name: name.trim(), createdAt: serverTimestamp(), createdBy: by }));
+  return ref.id;
+}
+
+export function renameList(hid, listId, name) {
+  bg(setDoc(doc(listsCol(hid), listId), { name: name.trim() }, { merge: true }));
+}
+
+/** Delete a list and everything on it. The main list can't be deleted. */
+export function deleteList(hid, listId, items) {
+  if (listId === MAIN_LIST) return;
+  clearItems(hid, items.filter((i) => listIdOf(i) === listId));
+  bg(deleteDoc(doc(listsCol(hid), listId)));
+}
+
+/** Which list this phone last looked at (per household). */
+const currentKey = (hid) => `grocery.list.${hid}`;
+export function readCurrentList(hid) {
+  try {
+    return localStorage.getItem(currentKey(hid)) || MAIN_LIST;
+  } catch {
+    return MAIN_LIST;
+  }
+}
+export function useCurrentList(hid, lists) {
+  const [id, setId] = useState(() => readCurrentList(hid));
+  const pick = (next) => {
+    setId(next);
+    try {
+      localStorage.setItem(currentKey(hid), next);
+    } catch {
+      /* ignore */
+    }
+  };
+  // Fall back to the main list if the one we were on was deleted.
+  const valid = !lists || lists.some((l) => l.id === id) ? id : MAIN_LIST;
+  return [valid, pick];
 }

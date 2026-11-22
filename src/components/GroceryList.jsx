@@ -1,11 +1,18 @@
 import { useMemo, useState } from 'react';
 import { CATEGORIES, categoryById } from '../lib/categories.js';
 import {
+  MAIN_LIST,
   addItems,
   clearItems,
+  createList,
+  deleteList,
+  listIdOf,
+  renameList,
   toggleItem,
   useCategoryOverrides,
+  useCurrentList,
   useItems,
+  useLists,
 } from '../lib/groceryStore.js';
 import { restockIfStaple, usePantry } from '../lib/pantryStore.js';
 import ItemSheet from './ItemSheet.jsx';
@@ -26,7 +33,20 @@ const millis = (t) => (t?.toMillis ? t.toMillis() : 0);
 
 export default function GroceryList({ household, user }) {
   const hid = household.id;
-  const items = useItems(hid);
+  const allItems = useItems(hid);
+  const lists = useLists(hid);
+  const [listId, setListId] = useCurrentList(hid, lists);
+  const list = (lists || []).find((l) => l.id === listId) || { id: listId, name: 'Groceries' };
+  const items = useMemo(
+    () => (allItems ? allItems.filter((i) => listIdOf(i) === listId) : null),
+    [allItems, listId],
+  );
+  const openByList = useMemo(() => {
+    const c = {};
+    for (const i of allItems || []) if (!i.checked) c[listIdOf(i)] = (c[listIdOf(i)] || 0) + 1;
+    return c;
+  }, [allItems]);
+  const [listSheet, setListSheet] = useState(null); // 'new' | 'edit'
   const overrides = useCategoryOverrides(hid);
   const pantry = usePantry(hid);
   const [text, setText] = useState('');
@@ -65,7 +85,7 @@ export default function GroceryList({ household, user }) {
     const res = await addItems(
       hid,
       names.map((name) => ({ name })),
-      { items: items || [], overrides, by: firstName(user) },
+      { items: items || [], overrides, by: firstName(user), listId },
     );
     if (res.existing && !res.added) flash('Already on the list');
     else if (res.existing) flash(`Added ${res.added}; ${res.existing} already on the list`);
@@ -83,17 +103,34 @@ export default function GroceryList({ household, user }) {
 
   const clearAll = async () => {
     if (!items?.length) return;
-    if (!window.confirm(`Remove all ${items.length} items from the list?`)) return;
+    if (!window.confirm(`Remove all ${items.length} items from ${list.name}?`)) return;
     await clearItems(hid, items);
   };
 
   return (
     <section>
+      <div className="list-switcher" role="tablist" aria-label="Lists">
+        {(lists || [{ id: MAIN_LIST, name: 'Groceries' }]).map((l) => (
+          <button
+            key={l.id}
+            role="tab"
+            aria-selected={l.id === listId}
+            className={`chip ${l.id === listId ? 'on' : ''}`}
+            onClick={() => (l.id === listId ? setListSheet('edit') : setListId(l.id))}
+          >
+            {l.name}
+            {openByList[l.id] ? <span className="count">{openByList[l.id]}</span> : null}
+            {l.id === listId && <span className="chip-edit" aria-label="Edit list">✎</span>}
+          </button>
+        ))}
+        <button className="chip add" onClick={() => setListSheet('new')}>+ New list</button>
+      </div>
+
       <form className="add-bar" onSubmit={add}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Add items (e.g. milk, eggs, 2 lb chicken)"
+          placeholder={`Add to ${list.name} (e.g. milk, eggs)`}
           enterKeyHint="done"
           autoCapitalize="none"
           aria-label="Add items"
@@ -107,7 +144,7 @@ export default function GroceryList({ household, user }) {
 
       {items && items.length === 0 && (
         <div className="empty">
-          <p>Your list is empty.</p>
+          <p>{list.name} is empty.</p>
           <p className="muted small">Type above, or separate several items with commas.</p>
         </div>
       )}
@@ -147,13 +184,35 @@ export default function GroceryList({ household, user }) {
 
       {items && items.length > 0 && (
         <div className="footer-actions">
-          <button className="btn subtle danger" onClick={clearAll}>Clear entire list</button>
+          <button className="btn subtle danger" onClick={clearAll}>Clear this list</button>
         </div>
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}
+      {listSheet && (
+        <ListSheet
+          list={listSheet === 'edit' ? list : null}
+          onClose={() => setListSheet(null)}
+          onSave={(name) => {
+            if (listSheet === 'edit') renameList(hid, listId, name);
+            else setListId(createList(hid, name, firstName(user)));
+            setListSheet(null);
+          }}
+          onDelete={() => {
+            const n = items?.length || 0;
+            const msg = n
+              ? `Delete “${list.name}” and the ${n} item${n === 1 ? '' : 's'} on it?`
+              : `Delete “${list.name}”?`;
+            if (!window.confirm(msg)) return;
+            deleteList(hid, listId, allItems || []);
+            setListId(MAIN_LIST);
+            setListSheet(null);
+          }}
+        />
+      )}
       {editing && (
         <ItemSheet
+          lists={lists}
           hid={hid}
           item={(items || []).find((i) => i.id === editing.id) || editing}
           onClose={() => setEditing(null)}
@@ -185,5 +244,41 @@ function Row({ item, onToggle, onEdit }) {
         )}
       </button>
     </li>
+  );
+}
+
+function ListSheet({ list, onClose, onSave, onDelete }) {
+  const [name, setName] = useState(list?.name || '');
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <form
+        className="sheet stack"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim()) onSave(name);
+        }}
+      >
+        <h2>{list ? 'Edit list' : 'New list'}</h2>
+        <label>
+          Name
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Costco, Party, Trader Joe’s…"
+            autoFocus
+            maxLength={40}
+          />
+        </label>
+        <div className="row-actions">
+          {list && list.id !== MAIN_LIST && (
+            <button type="button" className="btn subtle danger" onClick={onDelete}>Delete list</button>
+          )}
+          <span className="spacer" />
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn primary" disabled={!name.trim()}>{list ? 'Save' : 'Create'}</button>
+        </div>
+      </form>
+    </div>
   );
 }

@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react';
 import { combineIngredients } from '../lib/ingredients.js';
-import { addItems, useCategoryOverrides, useItems } from '../lib/groceryStore.js';
+import {
+  addItems,
+  listIdOf,
+  useCategoryOverrides,
+  useCurrentList,
+  useItems,
+  useLists,
+} from '../lib/groceryStore.js';
 import { findStaple, usePantry } from '../lib/pantryStore.js';
 
 const firstName = (u) => (u.displayName || u.email || '').split(/[ @]/)[0];
@@ -22,7 +29,10 @@ function listName(name) {
 export default function AddToListSheet({ household, user, selections, onClose }) {
   const hid = household.id;
   const pantry = usePantry(hid);
-  const items = useItems(hid);
+  const allItems = useItems(hid);
+  const lists = useLists(hid);
+  const [listId, setListId] = useCurrentList(hid, lists);
+  const items = useMemo(() => (allItems || []).filter((i) => listIdOf(i) === listId), [allItems, listId]);
   const overrides = useCategoryOverrides(hid);
 
   const rows = useMemo(() => {
@@ -62,7 +72,7 @@ export default function AddToListSheet({ household, user, selections, onClose })
         sources: r.recipes,
         category: r.staple?.category,
       })),
-      { items: items || [], overrides, by: firstName(user) },
+      { items, overrides, by: firstName(user), listId },
     );
     onClose(true);
   };
@@ -92,6 +102,16 @@ export default function AddToListSheet({ household, user, selections, onClose })
     <div className="sheet-backdrop" onClick={() => onClose(false)}>
       <div className="sheet tall" onClick={(e) => e.stopPropagation()}>
         <h2>Add to grocery list</h2>
+        {lists && lists.length > 1 && (
+          <label className="inline-field">
+            Add to
+            <select value={listId} onChange={(e) => setListId(e.target.value)}>
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <p className="muted small">
           {selections.map((s) => s.recipe.title).join(', ')}. Untick anything you already have.
         </p>

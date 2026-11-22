@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { callApi, imageToDataUrl } from '../lib/api.js';
 import { addStaples, findStaple } from '../lib/pantryStore.js';
+import PhotoPicker from './PhotoPicker.jsx';
 
 /** Take a photo of shelves; Claude suggests staples to add. */
 export default function PantryScan({ hid, pantry, overrides, onClose }) {
@@ -49,17 +50,11 @@ export default function PantryScan({ hid, pantry, overrides, onClose }) {
             <p className="muted small">
               Take a photo of a cupboard, spice rack or fridge door. Claude will suggest what to add to your staples.
             </p>
-            <label className="btn primary file-btn">
-              {busy ? 'Looking at your photo…' : '📷 Take or choose photos'}
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={busy}
-                onChange={(e) => scan(e.target.files)}
-                hidden
-              />
-            </label>
+            {busy ? (
+              <p className="center">Looking at your photo…</p>
+            ) : (
+              <PhotoPicker files={[]} onChange={(f) => scan(f)} />
+            )}
           </>
         )}
         {found && (

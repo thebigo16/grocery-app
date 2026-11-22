@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { CATEGORIES } from '../lib/categories.js';
-import { deleteItem, updateItem } from '../lib/groceryStore.js';
+import { deleteItem, listIdOf, updateItem } from '../lib/groceryStore.js';
 
-export default function ItemSheet({ hid, item, onClose }) {
+export default function ItemSheet({ hid, item, lists, onClose }) {
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note || '');
   const [category, setCategory] = useState(item.category);
+  const [listId, setListId] = useState(listIdOf(item));
 
   const save = async (e) => {
     e.preventDefault();
@@ -13,6 +14,7 @@ export default function ItemSheet({ hid, item, onClose }) {
     if (name.trim() && name.trim() !== item.name) patch.name = name.trim();
     if (note !== (item.note || '')) patch.note = note.trim();
     if (category !== item.category) patch.category = category;
+    if (listId !== listIdOf(item)) patch.listId = listId;
     if (Object.keys(patch).length) await updateItem(hid, item, patch);
     onClose();
   };
@@ -44,6 +46,16 @@ export default function ItemSheet({ hid, item, onClose }) {
             ))}
           </select>
         </label>
+        {lists && lists.length > 1 && (
+          <label>
+            List
+            <select value={listId} onChange={(e) => setListId(e.target.value)}>
+              {lists.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {category !== item.category && (
           <p className="muted small">The app will remember this group for “{name}” next time.</p>
         )}

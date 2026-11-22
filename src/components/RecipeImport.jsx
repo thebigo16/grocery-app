@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { callApi, imageToDataUrl } from '../lib/api.js';
+import PhotoPicker from './PhotoPicker.jsx';
 
 export default function RecipeImport({ onCancel, onImported, initialLink = '' }) {
   const [mode, setMode] = useState(initialLink ? 'link' : 'photo');
@@ -63,15 +64,10 @@ export default function RecipeImport({ onCancel, onImported, initialLink = '' })
 
       {mode === 'photo' && (
         <>
-          <p className="muted small">Take a photo of the cookbook page (up to 4 photos if it runs over a page).</p>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => setFiles([...e.target.files])}
-            aria-label="Recipe photos"
-          />
-          {files.length > 0 && <p className="small">{files.length} photo{files.length > 1 ? 's' : ''} selected</p>}
+          <p className="muted small">
+            Photograph the cookbook page. If the recipe runs onto another page, add it too (up to 4).
+          </p>
+          <PhotoPicker files={files} onChange={setFiles} disabled={busy} />
         </>
       )}
       {mode === 'link' && (
@@ -90,7 +86,9 @@ export default function RecipeImport({ onCancel, onImported, initialLink = '' })
         </>
       )}
 
-      <button className="btn primary" disabled={busy}>{busy ? 'Reading the recipe…' : 'Import'}</button>
+      <button className="btn primary" disabled={busy || (mode === 'photo' && !files.length)}>
+        {busy ? 'Reading the recipe…' : 'Import recipe'}
+      </button>
       {error && <p className="error">{error}</p>}
     </form>
   );
