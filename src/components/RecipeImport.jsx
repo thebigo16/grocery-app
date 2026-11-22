@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { callApi, imageToDataUrl } from '../lib/api.js';
 
-export default function RecipeImport({ onCancel, onImported }) {
-  const [mode, setMode] = useState('photo');
+export default function RecipeImport({ onCancel, onImported, initialLink = '' }) {
+  const [mode, setMode] = useState(initialLink ? 'link' : 'photo');
   const [files, setFiles] = useState([]);
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(initialLink);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

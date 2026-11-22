@@ -295,3 +295,10 @@ label > input, label > select, label > textarea { font-weight: 400; }
   padding: 10px 16px; border-radius: 999px; font-size: 0.9rem; z-index: 60;
   max-width: calc(100% - 32px);
 }
+
+.file-btn { display: flex; justify-content: center; }
+.plain-list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+}
+.plain-list > li:first-child { border-top: 0; }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase.js';
 import { useHousehold, joinHousehold } from './lib/useHousehold.js';
-import { capturePendingJoin, getPendingJoin, clearPendingJoin } from './lib/pendingJoin.js';
+import { capturePendingJoin, getPendingJoin, clearPendingJoin, takeSharedLink } from './lib/pendingJoin.js';
 import { useOnline } from './lib/useOnline.js';
 import SignIn from './components/SignIn.jsx';
 import HouseholdSetup from './components/HouseholdSetup.jsx';
@@ -12,6 +12,7 @@ import Recipes from './components/Recipes.jsx';
 import Settings from './components/Settings.jsx';
 
 capturePendingJoin();
+const sharedLink = takeSharedLink();
 
 const TABS = [
   { id: 'list', label: 'List', icon: '🛒' },
@@ -49,7 +50,7 @@ function SignedIn({ user }) {
   const { loading, household, all, error } = useHousehold(user);
   const [joining, setJoining] = useState(() => getPendingJoin());
   const [joinError, setJoinError] = useState('');
-  const [tab, setTab] = useState(readTab);
+  const [tab, setTab] = useState(() => (sharedLink ? 'recipes' : readTab()));
   const online = useOnline();
 
   useEffect(() => {
@@ -88,7 +89,7 @@ function SignedIn({ user }) {
       <main className="content">
         {tab === 'list' && <GroceryList household={household} user={user} />}
         {tab === 'pantry' && <Pantry household={household} user={user} />}
-        {tab === 'recipes' && <Recipes household={household} user={user} />}
+        {tab === 'recipes' && <Recipes household={household} user={user} sharedLink={sharedLink} />}
         {tab === 'settings' && <Settings household={household} user={user} households={all} />}
       </main>
       <nav className="tabbar">

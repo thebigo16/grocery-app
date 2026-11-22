@@ -10,6 +10,7 @@ import {
   setStapleStatus,
   usePantry,
 } from '../lib/pantryStore.js';
+import PantryScan from './PantryScan.jsx';
 
 const firstName = (u) => (u.displayName || u.email || '').split(/[ @]/)[0];
 
@@ -22,6 +23,7 @@ export default function Pantry({ household, user }) {
   const [filter, setFilter] = useState('all');
   const [editing, setEditing] = useState(null);
   const [toast, setToast] = useState('');
+  const [scanning, setScanning] = useState(false);
 
   const counts = useMemo(() => {
     const c = { all: 0, have: 0, low: 0, out: 0 };
@@ -88,6 +90,9 @@ export default function Pantry({ household, user }) {
         />
         <button className="btn primary" disabled={!text.trim()}>Add</button>
       </form>
+      <div className="button-row">
+        <button className="btn" onClick={() => setScanning(true)}>📷 Scan shelves to add staples</button>
+      </div>
 
       {pantry && pantry.length === 0 && (
         <div className="card stack">
@@ -152,6 +157,9 @@ export default function Pantry({ household, user }) {
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}
+      {scanning && (
+        <PantryScan hid={hid} pantry={pantry} overrides={overrides} onClose={() => setScanning(false)} />
+      )}
       {editing && <StapleSheet hid={hid} staple={editing} onClose={() => setEditing(null)} />}
     </section>
   );

@@ -6,10 +6,10 @@ import AddToListSheet from './AddToListSheet.jsx';
 
 const firstName = (u) => (u.displayName || u.email || '').split(/[ @]/)[0];
 
-export default function Recipes({ household, user }) {
+export default function Recipes({ household, user, sharedLink }) {
   const hid = household.id;
   const recipes = useRecipes(hid);
-  const [view, setView] = useState({ name: 'list' });
+  const [view, setView] = useState(() => (sharedLink ? { name: 'import', link: sharedLink } : { name: 'list' }));
   const [plan, setPlan] = useState({}); // recipeId -> factor
   const [search, setSearch] = useState('');
   const [review, setReview] = useState(null); // [{recipe, factor}]
@@ -61,6 +61,7 @@ export default function Recipes({ household, user }) {
   if (view.name === 'import') {
     return (
       <RecipeImport
+        initialLink={view.link}
         onCancel={() => setView({ name: 'list' })}
         onImported={(draft) => setView({ name: 'edit', draft })}
       />
