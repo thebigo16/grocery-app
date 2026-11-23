@@ -332,3 +332,36 @@ label > input, label > select, label > textarea { font-weight: 400; }
   width: 30px; height: 30px; border-radius: 50%; border: 0;
   background: var(--line); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
 }
+
+/* Pantry sections */
+.pantry-filters { flex-wrap: nowrap; align-items: center; }
+.filter-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.chip.add { border-style: dashed; flex: 0 0 auto; }
+.hint { margin: -4px 2px 10px; }
+.section { border-radius: var(--radius); transition: background 0.15s, box-shadow 0.15s; }
+.section-name {
+  background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
+  font: inherit; text-transform: inherit; letter-spacing: inherit;
+}
+.edit-icon { opacity: 0.7; margin-left: 2px; text-transform: none; }
+.dragging .section { box-shadow: 0 0 0 2px transparent; }
+.section.drop-over { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
+.drop-empty {
+  border: 2px dashed var(--line); border-radius: var(--radius); padding: 16px; text-align: center;
+  color: var(--muted); font-size: 0.85rem;
+}
+.section.drop-over .drop-empty { border-color: var(--accent); color: var(--accent); }
+.drag-handle {
+  flex: 0 0 auto; width: 28px; align-self: stretch; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 1.1rem; cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.pantry-row:has(.drag-handle) { padding-left: 2px; }
+.dragging, .dragging * { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+.drag-source { opacity: 0.4; }
+.drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none;
+  margin: -22px 0 0 -20px; padding: 10px 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  font-weight: 600; white-space: nowrap;
+}

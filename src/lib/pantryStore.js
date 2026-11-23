@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -107,4 +108,37 @@ export function findStaple(pantry, name) {
     }
   }
   return best;
+}
+
+/* ---------- Sections the household makes for its own pantry ---------- */
+
+const sectionsDoc = (hid) => doc(db, 'households', hid, 'settings', 'pantrySections');
+
+/** Live, ordered list of sections: [{ id, name }]. Staples point at one with `section`. */
+export function usePantrySections(hid) {
+  return useLive(() => hid && sectionsDoc(hid), (snap) => snap.data()?.list || [], [hid]);
+}
+
+export function saveSections(hid, list) {
+  bg(setDoc(sectionsDoc(hid), { list }));
+}
+
+export const newSectionId = () => Math.random().toString(36).slice(2, 10);
+
+export function setStapleSection(hid, staple, sectionId) {
+  bg(updateDoc(doc(pantryCol(hid), staple.id), { section: sectionId || null }));
+}
+
+/** Delete a section; its staples go back to "Not in a section". */
+export function deleteSection(hid, sections, pantry, sectionId) {
+  saveSections(hid, sections.filter((x) => x.id !== sectionId));
+  const batch = writeBatch(db);
+  let n = 0;
+  for (const p of pantry || []) {
+    if (p.section === sectionId) {
+      batch.update(doc(pantryCol(hid), p.id), { section: null });
+      n += 1;
+    }
+  }
+  if (n) bg(batch.commit());
 }
